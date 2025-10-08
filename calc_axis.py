@@ -1,70 +1,79 @@
 """
-Módulo calc_axis.py - Cálculo de Eixos da Guitarra
-==================================================
-Módulo planejado para calcular a geometria e orientação da guitarra.
-Determinaria eixos principais, perpendiculares e sistema de coordenadas.
-
-STATUS: INCOMPLETO - Apenas estrutura básica implementada
-
-Funcionalidades planejadas:
-- Calcular eixo principal (pestana → trastes)
-- Calcular eixo perpendicular (direção das cordas)
-- Estabelecer sistema de coordenadas
-- Base para mapeamento de casas e cordas
+    frets = [] # trastes
+    nut = [] # parte branca
+    neck = [] # braço
 """
 
-import numpy as np  # Biblioteca para computação científica e álgebra linear
+def calc_axis(frame, nut, frets, draw=True):
+    """
 
-def calc_axis(frame, nut, frets):
+    Returns a minimal dict: valid, nut_point, mean_frets, axis, angle_deg, projections (list of s values and proj pts).
     """
-    Calcula os eixos principais da guitarra baseado nas detecções.
-    
-    FUNÇÃO ATUALMENTE INCOMPLETA - Apenas placeholder
-    
-    Args:
-        frame: Imagem da guitarra (para contexto visual)
-        nut: Dados da pestana detectada [(x, y, conf), ...]
-        frets: Lista de trastes detectados [(x, y, conf), ...]
-        
-    Returns:
-        Planejado retornar:
-        - axis_unit: Vetor unitário do eixo principal
-        - perp_unit: Vetor unitário perpendicular  
-        - origin: Posição da pestana como origem
-        
-    Implementação sugerida baseada no IA-EXEMPLo.py:
-    """
-    
-    # === IMPLEMENTAÇÃO FUTURA SUGERIDA ===
-    # 
-    # # Verifica se há dados suficientes
-    # if not nut or len(frets) == 0:
-    #     return None, None, None
-    # 
-    # # Extrai coordenadas da pestana
-    # nut_pos = np.array([nut[0][0], nut[0][1]], dtype=float)
-    # 
-    # # Extrai coordenadas dos trastes
-    # fret_coords = np.array([[f[0], f[1]] for f in frets], dtype=float)
-    # 
-    # # Calcula direção média dos trastes
-    # mean_fret = np.mean(fret_coords, axis=0)
-    # direction = mean_fret - nut_pos
-    # 
-    # # Normaliza para vetor unitário
-    # norm = np.linalg.norm(direction)
-    # if norm == 0:
-    #     return None, None, None
-    # 
-    # axis_unit = direction / norm                    # Eixo principal
-    # perp_unit = np.array([-axis_unit[1], axis_unit[0]])  # Eixo perpendicular
-    # 
-    # return axis_unit, perp_unit, nut_pos
-    
-    # === IMPLEMENTAÇÃO ATUAL ===
-    pass  # Placeholder - não faz nada por enquanto
-    
-    # TODO: Implementar cálculos geométricos
-    # TODO: Integrar com o sistema principal
-    # TODO: Testar com dados reais
-    # TODO: Adicionar validação de entrada
+    import math
+
+    out = {'valid': False, 'nut_point': None, 'mean_frets': None, 'axis': None, 'angle_deg': None, 'projections': []}
+
+    if not frets:
+        return out
+
+    # choose nut
+    if nut:
+        nut_pt = (int(nut[0][0]), int(nut[0][1]))
+    else:
+        # fallback to top-most fret
+        fx = min(frets, key=lambda x: x[1])
+        nut_pt = (int(fx[0]), int(fx[1]))
+
+    # mean of frets
+    sx = sy = 0.0
+    for cx, cy, _ in frets:
+        sx += cx; sy += cy
+    mean_x = sx / len(frets)
+    mean_y = sy / len(frets)
+    mean_pt = (int(mean_x), int(mean_y))
+
+    dx = mean_x - nut_pt[0]
+    dy = mean_y - nut_pt[1]
+    norm = math.hypot(dx, dy)
+    if norm < 1e-6:
+        return out
+    ux = dx / norm
+    uy = dy / norm
+
+    # axis endpoints for drawing (extend across image)
+    h, w = frame.shape[:2]
+    pad = max(w, h)
+    start = (int(nut_pt[0] - ux * pad), int(nut_pt[1] - uy * pad))
+    end = (int(nut_pt[0] + ux * pad), int(nut_pt[1] + uy * pad))
+
+    angle_deg = math.degrees(math.atan2(uy, ux))
+
+    out.update({'valid': True, 'nut_point': nut_pt, 'mean_frets': mean_pt, 'axis': (start, end), 'angle_deg': angle_deg})
+
+    # project each fret onto the axis and compute scalar s
+    projections = []
+    for cx, cy, conf in frets:
+        rx = cx - nut_pt[0]
+        ry = cy - nut_pt[1]
+        s = rx * ux + ry * uy
+        proj_x = int(nut_pt[0] + ux * s)
+        proj_y = int(nut_pt[1] + uy * s)
+        projections.append({'pt': (int(cx), int(cy)), 'proj': (proj_x, proj_y), 's': s, 'conf': conf})
+
+    out['projections'] = projections
+
+    if draw: 
+        try:
+            import cv2 as _cv
+            _cv.line(frame, start, end, (0,255,255), 2)
+            _cv.circle(frame, nut_pt, 5, (255,0,0), -1)
+            _cv.circle(frame, mean_pt, 5, (0,255,0), -1)
+            for p in projections:
+                _cv.circle(frame, p['pt'], 3, (0,200,0), -1)
+                _cv.circle(frame, p['proj'], 3, (0,0,200), -1)
+                _cv.line(frame, p['pt'], p['proj'], (200,200,0), 1)
+        except Exception:
+            # drawing is optional; if cv2 missing, just continue
+            pass
+
+    return out
