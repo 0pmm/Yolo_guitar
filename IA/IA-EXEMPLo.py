@@ -172,9 +172,10 @@ if __name__=="__main__":
     prev_state=None
 
     while True:
-        ret,frame=cap.read()
-        if not ret: break
-    
+        # ret,frame=cap.read()
+        # if not ret: break
+        frame = cv2.imread("violao.jpg")
+        
         results=model(frame)
         frame_drawn,prev_state=process_frame(frame,results,prev_state)
 
