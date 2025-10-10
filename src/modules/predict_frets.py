@@ -42,6 +42,9 @@ def compare_projected_predicted(data):
     pt_projected.sort(key=lambda x: x[0], reverse=True)
 
     pt_projected_final = []
+    
+    axis_unit = data['axis_unit']
+    nut = data['nut'][0][:2]
 
     n_trastes = len(pt_expected)
 
@@ -52,28 +55,42 @@ def compare_projected_predicted(data):
                 projected_diff = abs(pt_projected[i][0] - pt_projected[i+1][0])
 
                 if expected_diff * 1.5 < projected_diff:
+                    pt = pt_expected[i+1]
                     pt_projected_final.append({
-                        'pt': pt_expected[i+1],
-                        'ordem': i + 1
+                        'pt': pt,
+                        'ordem': i + 1,
+                        'distance': axis_distance(pt, nut, axis_unit)
                     })
                     # print(f"[FALHA] Traste {i+1} ausente → usando EXPECTED")
+                    pt = pt_projected[i]
                     pt_projected_final.append({
-                        'pt': pt_projected[i],
-                        'ordem': i
+                        'pt': pt,
+                        'ordem': i,
+                        'distance': axis_distance(pt, nut, axis_unit)
                     })
                     # print(f"[FALHA] Traste {i} OK → usando PROJECTED")
                 else:
+                    pt = pt_projected[i]
                     pt_projected_final.append({
-                        'pt': pt_projected[i],
-                        'ordem': i
+                        'pt': pt,
+                        'ordem': i,
+                        'distance': axis_distance(pt, nut, axis_unit)
                     })
                     # print(f"[YOLO] Traste {i+1} OK → usando PROJECTED")
             else:
+                pt = pt_projected[i]
                 pt_projected_final.append({
-                    'pt': pt_projected[i],
-                    'ordem': i
+                    'pt': pt,
+                    'ordem': i,
+                    'distance': axis_distance(pt, nut, axis_unit)
                 })
                 # print(f"[YOLO] Traste {i+1} OK → usando PROJECTED")
 
     out['pt_projected_final'] = pt_projected_final
     return out
+
+
+def axis_distance(pt, nut, axis_unit):
+    vx = int(pt[0] - nut[0])
+    vy = int(pt[1] - nut[1])
+    return vx * axis_unit[0] + vy * axis_unit[1]

@@ -1,9 +1,6 @@
 import cv2 
 
 def draw(data, frame, allowed_classes):
-    if allowed_classes is None or "frets" in allowed_classes:
-        for (cx, cy, conf) in data['frets']:
-            cv2.circle(frame, (cx, cy), 5, (0, 255, 0), 2)
     if allowed_classes is None or "frets_box" in allowed_classes:
         for (pt1, pt2, conf) in data['frets_box']:
             x1, y1 = pt1
@@ -42,3 +39,14 @@ def draw(data, frame, allowed_classes):
                 cv2.circle(frame, pt, 3, (255,0,0), -1)
 
     return frame
+
+def draw_chord(frame, casas, chord):
+    for corda, casa in chord.items():
+        if casa == 0:
+            continue  # corda solta, não desenha dedo
+        pt = casas[casa][corda]  # ✅ aqui
+        cv2.circle(frame, pt, 6, (255, 0, 0), -1)  # Dedo (azul)
+        cv2.putText(frame, str(corda), (pt[0]-15, pt[1]),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+    return frame
+
