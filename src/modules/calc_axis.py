@@ -1,7 +1,7 @@
 import math
 
 def calc_axis(frame, nut, frets, neck_box):
-    out = {'valid': False, 'nut_point': None, 'mean_frets': None, 'axis': None, 'angle_deg': None, 'projections': []}
+    out = {'valid': False, 'nut_point': None, 'mean_frets': None, 'axis': (0,0), 'angle_deg': None, 'projections': []}
 
     if not frets:
         return out
@@ -27,27 +27,21 @@ def calc_axis(frame, nut, frets, neck_box):
     ux = dx / norm
     uy = dy / norm
 
-    # DEFINIR start E end SEMPRE (mesmo sem neck_box)
-    start = nut_pt  # start é sempre a nut
-    
+    start = nut_pt    
     if neck_box and len(neck_box) > 0:
-        # Usar o comprimento da neck box como referência
         (nx1, ny1), (nx2, ny2), conf = neck_box[0]
         neck_length = math.hypot(nx2 - nx1, ny2 - ny1)
         
-        # Eixo vai da nut até o final do neck
         end = (
             int(nut_pt[0] + ux * neck_length),
             int(nut_pt[1] + uy * neck_length)
         )
     else:
-        # Fallback: usar um comprimento padrão baseado na imagem
-        h, w = frame.shape[:2]
-        # Usar 80% da largura da imagem como comprimento máximo
-        max_length = w * 0.8
+        frame_height = frame.shape[0]
+        default_length = frame_height * 0.8
         end = (
-            int(nut_pt[0] + ux * max_length),
-            int(nut_pt[1] + uy * max_length)
+            int(nut_pt[0] + ux * default_length),
+            int(nut_pt[1] + uy * default_length)
         )
 
     angle_deg = math.degrees(math.atan2(uy, ux))
@@ -61,6 +55,7 @@ def calc_axis(frame, nut, frets, neck_box):
     })
 
     projections = []
+    n = 1
     for cx, cy, conf in frets:
         rx = cx - nut_pt[0]
         ry = cy - nut_pt[1]
@@ -70,9 +65,11 @@ def calc_axis(frame, nut, frets, neck_box):
         projections.append({
             'pt': (int(cx), int(cy)), 
             'proj': (proj_x, proj_y), 
-            's': s, 
+            's': s,
+            'n': n,
             'conf': conf
         })
+        n += 1
 
     out['projections'] = projections
     return out

@@ -1682,6 +1682,18 @@ mpmath = ">=1.1.0,<1.4"
 dev = ["hypothesis (>=6.70.0)", "pytest (>=7.1.0)"]
 
 [[package]]
+name = "threadpoolexecutorplus"
+version = "0.2.2"
+description = "A fully replaceable executor that makes it possible to reuse idle threads and shrink thread list when there's no heavy load. - GitHub - GoodManWEN/ThreadPoolExecutorPlus: A fully replaceable executor that makes it possible to reuse idle threads and shrink thread list when there's no heavy load."
+optional = false
+python-versions = ">=3.5"
+groups = ["main"]
+files = [
+    {file = "ThreadPoolExecutorPlus-0.2.2-py3-none-any.whl", hash = "sha256:bd5fada94b5563ccea24b2758c9a0629820f0a40815ad03f268794c63ff5e72f"},
+    {file = "ThreadPoolExecutorPlus-0.2.2.tar.gz", hash = "sha256:aa958057f9ca72892f217c8a3af2b28d3a38d97510ece4189fe82f06ed0c7312"},
+]
+
+[[package]]
 name = "torch"
 version = "2.7.1"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
@@ -1897,4 +1909,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13"
-content-hash = "cf8d16a0cbd528fd2515c3764216243a73c2fdfcae1e68726e552e31f6345978"
+content-hash = "38f347b9dc75d9be47eb366c58e373cd53877128ad23e997adcb2244008e0404"

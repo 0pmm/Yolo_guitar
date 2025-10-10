@@ -36,5 +36,9 @@ def draw(data, frame, allowed_classes):
             for p in data['expected']:
                 pt = p.get('pt')
                 cv2.circle(frame, pt, 3, (255, 0, 255), -1)
+        if allowed_classes is None or "pt_projected_final" in allowed_classes:
+            for p in data['pt_projected_final']:
+                pt = p.get('pt')
+                cv2.circle(frame, pt, 3, (255,0,0), -1)
 
     return frame

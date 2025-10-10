@@ -12,7 +12,8 @@ dependencies = [
     "opencv-python (>=4.12.0.88,<5.0.0.0)",
     "onnx (>=1.19.0,<2.0.0)",
     "onnxruntime (>=1.23.0,<2.0.0)",
-    "onnxslim (>=0.1.70,<0.2.0)"
+    "onnxslim (>=0.1.70,<0.2.0)",
+    "threadpoolexecutorplus (>=0.2.2,<0.3.0)"
 ]
 
 [tool.poetry]
