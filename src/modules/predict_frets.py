@@ -37,6 +37,10 @@ def predict_frets_positions(axis_info, n_frets=19):
 def compare_projected_predicted(data):
     out = {'pt_projected_final': []}
 
+
+    if 'nut' not in data or not data['nut']:
+        return out
+    
     pt_expected = [item['pt'] for item in data['expected']]
     pt_projected = [item['pt'] for item in data['projections']]
     pt_projected.sort(key=lambda x: x[0], reverse=True)
