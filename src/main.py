@@ -1,5 +1,4 @@
 import cv2
-import numpy as np # Adicionado explicitamente para manipulação de arrays
 from ultralytics import YOLO
 from core.config import Config
 from core.state_manager import StateManager
@@ -44,26 +43,20 @@ def main():
 
     # --- INÍCIO DA LÓGICA DE OVERLAY DA IMAGEM ---
     
-    # 1. Constrói o caminho da imagem (ex: data/images/A_MAJOR.png)
-    chord_name = current_chord['name'].upper() # Assumindo que current_chord tem a chave 'name'
+    chord_name = current_chord['name'].upper()
     CHORD_IMAGE_PATH = f"./src/data/images/{chord_name}.png" 
 
-    # 2. Carrega a imagem com canal alpha (transparência)
     corner_img = cv2.imread(CHORD_IMAGE_PATH, cv2.IMREAD_UNCHANGED)
 
-    # 3. Define o tamanho e redimensiona
-    CORNER_W, CORNER_H = 200, 150 # Tamanho fixo para o canto
+    CORNER_W, CORNER_H = 200, 150
     
     if corner_img is None:
         print(f"ERRO: Nao foi possivel carregar a imagem de overlay: {CHORD_IMAGE_PATH}")
         corner_img_resized = None
     else:
-        # Redimensiona a imagem uma única vez
         corner_img_resized = cv2.resize(corner_img, (CORNER_W, CORNER_H))
     
-    # Define a posição (Canto Superior Esquerdo com margem de 10px)
     CORNER_POS_X, CORNER_POS_Y = 10, 10
-    # --- FIM DA LÓGICA DE OVERLAY DA IMAGEM ---
 
     cv2.namedWindow("Chord", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Chord", 1000, 700)
@@ -72,6 +65,8 @@ def main():
     while True:
         ret, webcam_frame = cap.read()
         frame = webcam_frame if ret else current_frame.copy()
+        # frame = current_frame.copy()
+        update_corner_image = False
 
         data = pipeline.process_frame(frame)
 
@@ -81,34 +76,29 @@ def main():
             frame_chord = draw_chord(frame.copy(), data['casas'], current_chord)
         else:
             frame_chord = frame.copy()
-            cv2.putText(frame_chord, "Waiting Detection...", (50, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            # cv2.putText(frame_chord, "Waiting Detection...", (50, 50), 
+            #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         
         # --- APLICAÇÃO DA SOBREPOSIÇÃO DENTRO DO LOOP ---
         if corner_img_resized is not None:
             
-            # Pega as dimensões da imagem redimensionada
+
             oh, ow = corner_img_resized.shape[:2]
 
-            # Seleciona a Região de Interesse (ROI) no frame principal
+
             roi = frame_chord[CORNER_POS_Y : CORNER_POS_Y + oh, 
                               CORNER_POS_X : CORNER_POS_X + ow]
 
-            # Verifica se o ROI tem o mesmo tamanho que a imagem de overlay (prevenção de erro)
             if roi.shape[:2] == (oh, ow):
-                # Verifica se a imagem tem canal Alpha (transparência - 4 canais)
                 if corner_img_resized.shape[2] == 4:
-                    # PNG com transparência: faz a mistura (blending)
                     bgr = corner_img_resized[:, :, :3]
-                    alpha = corner_img_resized[:, :, 3].astype(float) / 255.0  # Normaliza Alpha
+                    alpha = corner_img_resized[:, :, 3].astype(float) / 255.0
                     
                     alpha_inv = 1.0 - alpha
                     
-                    # Mistura o plano de fundo (ROI) e o primeiro plano (bgr)
                     for c in range(0, 3):
                         roi[:, :, c] = (roi[:, :, c] * alpha_inv) + (bgr[:, :, c] * alpha)
                 else:
-                    # JPG ou PNG sem transparência (3 canais): atribuição direta
                     roi[:, :] = corner_img_resized[:, :, :3]
         # ----------------------------------------------------
         
@@ -128,6 +118,35 @@ def main():
             break
         elif chr(key) in Config.VIEW_MODE: 
             allowed_classes = Config.VIEW_MODE[chr(key)]
+        elif key == ord('a'):
+            current_chord = chords["A_MAJOR"]
+            update_corner_image = True
+        elif key == ord('b'):
+            current_chord = chords["B_MAJOR"]
+            update_corner_image = True
+        elif key == ord('c'):
+            current_chord = chords["C_MAJOR"]
+            update_corner_image = True
+        elif key == ord('d'):
+            current_chord = chords["D_MAJOR"]
+            update_corner_image = True
+        elif key == ord('e'):
+            current_chord = chords["E_MAJOR"]
+            update_corner_image = True
+        elif key == ord('f'):
+            current_chord = chords["F_MAJOR"]
+            update_corner_image = True
+        elif key == ord('g'):
+            current_chord = chords["G_MAJOR"]
+            update_corner_image = True
+    
+        if update_corner_image:
+            chord_name = current_chord['name'].upper()
+            CHORD_IMAGE_PATH = f"./src/data/images/{chord_name}.png"
+            corner_img = cv2.imread(CHORD_IMAGE_PATH, cv2.IMREAD_UNCHANGED)
+        if corner_img is not None:
+            corner_img_resized = cv2.resize(corner_img, (CORNER_W, CORNER_H))
+            update_corner_image = False
     
     cap.release()
     cv2.destroyAllWindows()
