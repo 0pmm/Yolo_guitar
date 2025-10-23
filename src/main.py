@@ -4,152 +4,126 @@ from core.config import Config
 from core.state_manager import StateManager
 from services.detection_pipeline import DetectionPipeline
 from modules.draw_boxes import draw, draw_chord
-from data.chords import chords 
+from data.chords import chords
+from modules.chord_matcher import AudioEventProcessor
+
+A_MAJOR = "src/data/images/A_MAJOR.png"
+B_MAJOR = "src/data/images/B_MAJOR.png"
+C_MAJOR = "src/data/images/C_MAJOR.png"
+D_MAJOR = "src/data/images/D_MAJOR.png"
+E_MAJOR = "src/data/images/E_MAJOR.png"
+F_MAJOR = "src/data/images/F_MAJOR.png"
+G_MAJOR = "src/data/images/G_MAJOR.png"
+
+CHORD_IMAGES = {
+    "A_MAJOR": A_MAJOR,
+    "B_MAJOR": B_MAJOR,
+    "C_MAJOR": C_MAJOR,
+    "D_MAJOR": D_MAJOR,
+    "E_MAJOR": E_MAJOR,
+    "F_MAJOR": F_MAJOR,
+    "G_MAJOR": G_MAJOR,
+}
+
+WEBCAM_WIDTH, WEBCAM_HEIGHT = 640, 480
+CHORD_WIDTH, CHORD_HEIGHT = 300, 400
 
 
-def resize_to_fit_window(frame, target_width, target_height):
+def resize_image(image, width, height):
+    return cv2.resize(image, (width, height), interpolation=cv2.INTER_AREA)
 
-    h, w = frame.shape[:2]
-
-    scale_x = target_width / w
-    scale_y = target_height / h
-    scale = max(scale_x, scale_y) 
-    new_w = int(w * scale)
-    new_h = int(h * scale)
-    
-    resized = cv2.resize(frame, (new_w, new_h))
-
-    start_x = max(0, (new_w - target_width) // 2)
-    start_y = max(0, (new_h - target_height) // 2)
-    cropped = resized[start_y:start_y + target_height, start_x:start_x + target_width]
-    
-    return cropped
 
 def main():
     model = YOLO(Config.MODEL_PATH)
     state = StateManager()
     pipeline = DetectionPipeline(model, state)
+    processor = AudioEventProcessor()  # processador de áudio
 
     cap = cv2.VideoCapture(Config.WEBCAM_ID)
-    placeholder = cv2.imread(Config.IMAGE_PATH)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WEBCAM_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, WEBCAM_HEIGHT)
 
-    current_frame = placeholder.copy() if placeholder is not None else None
-    allowed_classes = None
-    current_chord = chords["A_MAJOR"]
+    current_chord_name = "A_MAJOR"
+    current_chord = chords[current_chord_name]
+    chord_img = resize_image(cv2.imread(CHORD_IMAGES[current_chord_name]), CHORD_WIDTH, CHORD_HEIGHT)
 
-    if current_frame is None:
-        print("Placeholder nao foi carregado")
-        return
-
-    # --- INÍCIO DA LÓGICA DE OVERLAY DA IMAGEM ---
-    
-    chord_name = current_chord['name'].upper()
-    CHORD_IMAGE_PATH = f"./src/data/images/{chord_name}.png" 
-
-    corner_img = cv2.imread(CHORD_IMAGE_PATH, cv2.IMREAD_UNCHANGED)
-
-    CORNER_W, CORNER_H = 200, 150
-    
-    if corner_img is None:
-        print(f"ERRO: Nao foi possivel carregar a imagem de overlay: {CHORD_IMAGE_PATH}")
-        corner_img_resized = None
-    else:
-        corner_img_resized = cv2.resize(corner_img, (CORNER_W, CORNER_H))
-    
-    CORNER_POS_X, CORNER_POS_Y = 10, 10
-
-    cv2.namedWindow("Chord", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Chord", 1000, 700)
-
+    detection_text = "Aguardando som..."
+    detection_color = (180, 180, 180)
 
     while True:
-        ret, webcam_frame = cap.read()
-        frame = webcam_frame if ret else current_frame.copy()
-        # frame = current_frame.copy()
-        update_corner_image = False
-
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        frame = cv2.resize(frame, (WEBCAM_WIDTH, WEBCAM_HEIGHT))
         data = pipeline.process_frame(frame)
+        display = draw_chord(frame.copy(), data.get('casas', []), current_chord)
 
-        # frame_detection = draw(data, frame.copy(), allowed_classes)
-        
-        if data.get('casas') and 1 in data['casas']:
-            frame_chord = draw_chord(frame.copy(), data['casas'], current_chord)
-        else:
-            frame_chord = frame.copy()
-            # cv2.putText(frame_chord, "Waiting Detection...", (50, 50), 
-            #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        
-        # --- APLICAÇÃO DA SOBREPOSIÇÃO DENTRO DO LOOP ---
-        if corner_img_resized is not None:
-            
+        # --- PROCESSAMENTO DE ÁUDIO (DEBUG) ---
+        # Aqui simulamos a captura de áudio real em loop
+        # Caso você use WebRTC ou sounddevice, substitua audio_buffer por chunks reais
+        audio_result = None  # processará se houver um chunk real
+        # Exemplo: audio_result = processor.process_audio_chunk(chunk)
 
-            oh, ow = corner_img_resized.shape[:2]
-
-
-            roi = frame_chord[CORNER_POS_Y : CORNER_POS_Y + oh, 
-                              CORNER_POS_X : CORNER_POS_X + ow]
-
-            if roi.shape[:2] == (oh, ow):
-                if corner_img_resized.shape[2] == 4:
-                    bgr = corner_img_resized[:, :, :3]
-                    alpha = corner_img_resized[:, :, 3].astype(float) / 255.0
-                    
-                    alpha_inv = 1.0 - alpha
-                    
-                    for c in range(0, 3):
-                        roi[:, :, c] = (roi[:, :, c] * alpha_inv) + (bgr[:, :, c] * alpha)
+        # Atualiza texto de debug com base no resultado
+        if audio_result is not None:
+            if audio_result["status"] == "OK":
+                detected_chord = audio_result["acorde"]
+                similarity = audio_result["similarity"]
+                if detected_chord == current_chord_name:
+                    detection_text = f"{detected_chord} detectado ({similarity*100:.1f}%)"
+                    detection_color = (0, 255, 0)
                 else:
-                    roi[:, :] = corner_img_resized[:, :, :3]
-        # ----------------------------------------------------
-        
-        try:
-            window_rect = cv2.getWindowImageRect("Chord")
-            if window_rect[2] > 0 and window_rect[3] > 0:
-                win_w, win_h = window_rect[2], window_rect[3]
-                frame_resized = cv2.resize(frame_chord, (win_w, win_h))
-                cv2.imshow("Chord", frame_resized)
+                    detection_text = f"Som ≠ {current_chord_name} ({similarity*100:.1f}%)"
+                    detection_color = (0, 0, 255)
+                print(f"[DEBUG] Acorde detectado: {detected_chord} | Similaridade: {similarity:.3f}")
             else:
-                cv2.imshow("Chord", frame_chord)
-        except:
-            cv2.imshow("Chord", frame_chord)
+                detection_text = "Nenhum acorde reconhecido"
+                detection_color = (0, 0, 255)
+                print("[DEBUG] Nenhum acorde reconhecido")
+        else:
+            detection_text = "Detectando som..."
+            detection_color = (180, 180, 180)
+
+        cv2.putText(display, detection_text, (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, detection_color, 2, cv2.LINE_AA)
+
+        # --- GARANTE MESMO TIPO E ALTURA PARA CONCAT ---
+        if len(display.shape) == 2:
+            display = cv2.cvtColor(display, cv2.COLOR_GRAY2BGR)
+        if len(chord_img.shape) == 2:
+            chord_img = cv2.cvtColor(chord_img, cv2.COLOR_GRAY2BGR)
+        if display.shape[0] != chord_img.shape[0]:
+            chord_img = cv2.resize(chord_img, (chord_img.shape[1], display.shape[0]))
+        if display.dtype != chord_img.dtype:
+            chord_img = chord_img.astype(display.dtype)
+
+        combined = cv2.hconcat([display, chord_img])
+        cv2.imshow("Chord Detector", combined)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif chr(key) in Config.VIEW_MODE: 
+        elif chr(key) in Config.VIEW_MODE:
             allowed_classes = Config.VIEW_MODE[chr(key)]
-        elif key == ord('a'):
-            current_chord = chords["A_MAJOR"]
-            update_corner_image = True
-        elif key == ord('b'):
-            current_chord = chords["B_MAJOR"]
-            update_corner_image = True
-        elif key == ord('c'):
-            current_chord = chords["C_MAJOR"]
-            update_corner_image = True
-        elif key == ord('d'):
-            current_chord = chords["D_MAJOR"]
-            update_corner_image = True
-        elif key == ord('e'):
-            current_chord = chords["E_MAJOR"]
-            update_corner_image = True
-        elif key == ord('f'):
-            current_chord = chords["F_MAJOR"]
-            update_corner_image = True
-        elif key == ord('g'):
-            current_chord = chords["G_MAJOR"]
-            update_corner_image = True
-    
-        if update_corner_image:
-            chord_name = current_chord['name'].upper()
-            CHORD_IMAGE_PATH = f"./src/data/images/{chord_name}.png"
-            corner_img = cv2.imread(CHORD_IMAGE_PATH, cv2.IMREAD_UNCHANGED)
-        if corner_img is not None:
-            corner_img_resized = cv2.resize(corner_img, (CORNER_W, CORNER_H))
-            update_corner_image = False
-    
+        elif key in [ord('a'), ord('b'), ord('c'), ord('d'), ord('e'), ord('f'), ord('g')]:
+            chord_map = {
+                ord('a'): "A_MAJOR",
+                ord('b'): "B_MAJOR",
+                ord('c'): "C_MAJOR",
+                ord('d'): "D_MAJOR",
+                ord('e'): "E_MAJOR",
+                ord('f'): "F_MAJOR",
+                ord('g'): "G_MAJOR",
+            }
+            current_chord_name = chord_map[key]
+            current_chord = chords[current_chord_name]
+            chord_img = resize_image(cv2.imread(CHORD_IMAGES[current_chord_name]), CHORD_WIDTH, CHORD_HEIGHT)
+            detection_text = "Aguardando som..."
+            detection_color = (180, 180, 180)
+
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

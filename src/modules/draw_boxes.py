@@ -78,14 +78,6 @@ def draw_chord(frame, casas, chord):
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     
     for corda, info in chord["position"].items():
-        if not info["tocar"]:
-            if 0 in casas and corda in casas[0]:
-                pt = casas[0][corda]
-                cv2.circle(frame, pt, 4, (0,0,0), 1)
-                cv2.putText(frame, "X", (pt[0], pt[1]),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    
-    for corda, info in chord["position"].items():
         casa = info["casa"]
         dedo = info["dedo"]
         tocar = info["tocar"]

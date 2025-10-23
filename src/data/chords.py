@@ -96,10 +96,10 @@ chords = {
         "position": {
             6: {"casa": 3, "dedo": 2, "tocar": True},
             5: {"casa": 2, "dedo": 1, "tocar": True},
-            4: {"casa": 3, "dedo": 3, "tocar": True},
+            4: {"casa": 0, "dedo": 0, "tocar": True},
             3: {"casa": 0, "dedo": 0, "tocar": True},
             2: {"casa": 0, "dedo": 0, "tocar": True},
-            1: {"casa": 0, "dedo": 0, "tocar": True}
+            1: {"casa": 3, "dedo": 3, "tocar": True}
         }, 
         "pestana": {
             "active": False,
